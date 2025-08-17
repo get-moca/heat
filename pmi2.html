@@ -1,184 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mallorca Business Heat Map</title>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+  />
+  <title>Mallorca Busy Map (MVP)</title>
 
   <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+gXk3RyZkS1V9RrutG2OpWkS0ZbP0u8="
+    crossorigin=""
+  />
 
   <style>
-    body { 
-      margin: 0; 
-      padding: 0; 
-      font-family: Arial, sans-serif; 
-      background: #f0f0f0;
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --text: #e8eefc;
+      --muted: #9fb0d6;
+      --accent: #7aa2ff;
+      --accent-2: #31c48d;
+      --border: #22314d;
+      --shadow: 0 10px 30px rgba(0,0,0,0.25);
+      --radius: 16px;
     }
-    #map { height: 100vh; width: 100%; }
-    .info-panel {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-      min-width: 200px;
-    }
-    .current-time {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 10px;
-    }
-    .update-info {
-      font-size: 12px;
-      color: #666;
-    }
-    .legend {
-      position: absolute;
-      bottom: 30px;
-      left: 10px;
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-    }
-    .legend-title {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .legend-scale {
-      display: flex;
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif; }
+    #app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
       align-items: center;
-      gap: 5px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #0d1628 0%, #0b1220 100%);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 5000;
     }
-    .legend-gradient {
-      width: 100px;
-      height: 10px;
-      background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
+    .brand { font-weight: 700; letter-spacing: 0.2px; }
+    .status {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 8px 12px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .status .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent-2); box-shadow: 0 0 12px var(--accent-2); }
+    .muted { color: var(--muted); }
+
+    .controls {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      padding: 8px 12px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    button, .btn {
+      appearance: none; border: 1px solid var(--border); color: var(--text); background: #0f1830;
+      padding: 8px 12px; border-radius: 12px; cursor: pointer; transition: 0.2s transform, 0.2s background, 0.2s border-color;
+    }
+    button:hover, .btn:hover { background: #142041; transform: translateY(-1px); }
+    button.primary { background: #1a2a52; border-color: #2a3c66; }
+    button.primary:hover { background: #203364; }
+    .btn-link { color: var(--accent); text-decoration: none; }
+
+    #map { width: 100%; height: 100%; }
+
+    .panel {
+      position: absolute; z-index: 4000; right: 16px; bottom: 16px; left: 16px; max-width: 680px; margin-left: auto;
+      background: rgba(13,22,40,0.92); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 12px;
+    }
+    .row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; }
+    .label { font-size: 12px; color: var(--muted); }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      height: 28px;
+      background: transparent;
+    }
+
+    .badger {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px;
+      background: #0e1933; border: 1px solid var(--border); color: var(--muted); font-size: 12px;
+    }
+
+    @media (max-width: 720px) {
+      header { grid-template-columns: 1fr; gap: 8px; }
+      .status, .controls { width: 100%; }
+      .panel { left: 8px; right: 8px; }
+      .row { grid-template-columns: 1fr; gap: 6px; }
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="app">
+    <header>
+      <div class="brand">🌶️ Mallorca Busy Map — MVP</div>
 
-  <div class="info-panel">
-    <div class="current-time" id="current-time">Loading...</div>
-    <div class="update-info">Predicted activity levels<br>Based on historical patterns</div>
-  </div>
+      <div class="status" id="status">
+        <span class="dot"></span>
+        <span id="timeLabel">Loading time…</span>
+        <span class="badger" id="modeBadge">NOW</span>
+      </div>
 
-  <div class="legend">
-    <div class="legend-title">Activity Level</div>
-    <div class="legend-scale">
-      <span>Quiet</span>
-      <div class="legend-gradient"></div>
-      <span>Busy</span>
+      <div class="controls">
+        <button class="primary" id="nowBtn" title="Jump to current time">Now</button>
+        <button id="shareBtn" title="Copy a sharable link">Share</button>
+        <a class="btn btn-link" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>
+      </div>
+    </header>
+
+    <div id="map"></div>
+
+    <div class="panel">
+      <div class="row">
+        <div>
+          <div class="label">Time Window</div>
+          <div id="rangeCaption" class="muted">Last 24 hours</div>
+        </div>
+        <div class="badger" id="pointCount">0 points</div>
+        <div class="badger" id="busynessAvg">– avg</div>
+      </div>
+      <input id="timeRange" type="range" min="0" max="23" step="1" value="0" />
+      <div class="label muted">Drag the slider → 0 = now, 23 = 23 hours ago</div>
     </div>
   </div>
 
   <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <!-- Leaflet.heat -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <!-- Supabase JS -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2.47.10/dist/umd/supabase.js"></script>
 
   <script>
-    // Supabase config
-    const SUPABASE_URL = 'https://pbbqieughblgslipxsex.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYnFpZXVnaGJsZ3NsaXB4c2V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjM0ODYsImV4cCI6MjA3MDk5OTQ4Nn0.mQcvmS_uwAC9U3INJaWgEjP1ih0YIw5mkfEmMSPQnFc';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // =========================
+    // REQUIRED: EDIT THESE TWO
+    // =========================
+    // Replace with your Supabase project values (Project Settings → API)
+    const SUPABASE_URL = "https://rsbxesqwijscicakxjkk.supabase.co";  // <-- change this
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzYnhlc3F3aWpzY2ljYWt4amtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NTA3ODIsImV4cCI6MjA3MTAyNjc4Mn0.cPrMh42Khl21MsXYl4IOWViYZftsVjXi52Df4VhjWK8";             // <-- change this
+    // Make sure your RLS policies allow SELECT on both tables for anon.
 
-    // Initial view Mallorca
+    // Map center: Palma de Mallorca
+    const INITIAL_VIEW = { lat: 39.5696, lng: 2.6502, zoom: 13 };
+
+    // Create Supabase client
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Map + heat layer
     const map = L.map("map", {
       zoomControl: true,
       minZoom: 3,
+      worldCopyJump: true,
       attributionControl: false
-    }).setView([39.5696, 2.6502], 10);
+    }).setView([INITIAL_VIEW.lat, INITIAL_VIEW.lng], INITIAL_VIEW.zoom);
 
-    // Carto light basemap (fixes black/mixed tiles)
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    L.control.attribution({ position: "bottomleft" }).addTo(map);
+
+    const tiles = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://www.carto.com/">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 20
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
       }
     ).addTo(map);
 
-    let heatmapLayer;
+    const heat = L.heatLayer([], {
+      radius: 28,
+      blur: 18,
+      maxZoom: 19,
+      minOpacity: 0.25
+    }).addTo(map);
 
-    // Update current time
-    function updateCurrentTime() {
-      const now = new Date();
-      const options = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      };
-      document.getElementById('current-time').textContent = now.toLocaleDateString('en-US', options);
+    // UI elements
+    const timeRange = document.getElementById("timeRange");
+    const timeLabel = document.getElementById("timeLabel");
+    const rangeCaption = document.getElementById("rangeCaption");
+    const nowBtn = document.getElementById("nowBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const modeBadge = document.getElementById("modeBadge");
+    const pointCount = document.getElementById("pointCount");
+    const busynessAvg = document.getElementById("busynessAvg");
+
+    // Helpers
+    function pad2(n){ return (n<10?"0":"") + n; }
+
+    // Compute target timestamp based on slider (0 = now, 23 = 23h ago).
+    function getTargetDate() {
+      const urlTs = new URLSearchParams(location.search).get("ts");
+      let base = urlTs ? new Date(urlTs) : new Date();
+      // Slider is "hours ago"
+      const hoursAgo = Number(timeRange.value || 0);
+      const target = new Date(base.getTime() - hoursAgo * 3600 * 1000);
+      return target;
     }
 
-    // Get current predicted activity
-    function getCurrentActivity(activityPatterns) {
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const hour = now.getHours();
-      return activityPatterns.find(p => p.day_of_week === dayOfWeek && p.hour === hour)?.typical_busyness || 0;
+    // Map JS Date => day_of_week (0=Mon…6=Sun) and hour (0–23), Europe/Madrid local time.
+    function toDowHour(date) {
+      // Force Europe/Madrid by using Intl and then parse; simple approach for MVP.
+      const fmt = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Madrid",
+        weekday: "short",
+        hour: "2-digit",
+        hour12: false
+      });
+      const parts = fmt.formatToParts(date);
+      const w = parts.find(p => p.type === "weekday").value; // Mon, Tue, ...
+      const h = Number(parts.find(p => p.type === "hour").value);
+      const map = { Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5, Sun:6 };
+      return { day: map[w], hour: h, label: `${w} ${pad2(h)}:00` };
     }
 
-    // Load and display markers
-    async function loadHeatMap() {
-      try {
-        const { data: businesses } = await supabase.from('businesses').select('*');
-        const { data: allPatterns } = await supabase.from('activity_patterns').select('*');
+    function updateStatusText(target, labelText) {
+      const live = Number(timeRange.value) === 0 && !new URLSearchParams(location.search).get("ts");
+      modeBadge.textContent = live ? "NOW" : "HISTORIC";
+      timeLabel.textContent = labelText + (live ? " (live look)" : " (time travel)");
+      rangeCaption.textContent = `Showing: ${labelText} (Europe/Madrid)`;
+    }
 
-        if (heatmapLayer) map.removeLayer(heatmapLayer);
-        heatmapLayer = L.layerGroup();
+    // Fetch heat points from Supabase for a given day/hour.
+    async function fetchHeatPoints(day, hour) {
+      // We require the related business coordinates; use inner join.
+      // Ensure FK exists: activity_patterns.business_id -> businesses.id
+      const sel = "typical_busyness,hour,day_of_week,businesses!inner(latitude,longitude)";
+      const { data, error } = await sb
+        .from("activity_patterns")
+        .select(sel)
+        .eq("day_of_week", day)
+        .eq("hour", hour);
 
-        businesses.forEach(business => {
-          const businessPatterns = allPatterns.filter(p => p.business_id === business.id);
-          const currentBusyness = getCurrentActivity(businessPatterns);
+      if (error) {
+        console.error(error);
+        return [];
+      }
 
-          if (currentBusyness > 0) {
-            const intensity = currentBusyness / 100;
-            let color;
-            if (intensity < 0.2) color = '#00ffcc';
-            else if (intensity < 0.4) color = '#00ccff';
-            else if (intensity < 0.6) color = '#0099ff';
-            else if (intensity < 0.8) color = '#ff9900';
-            else color = '#cc0000';
-
-            const circle = L.circleMarker([business.latitude, business.longitude], {
-              radius: 4,
-              fillColor: color,
-              color: color,
-              weight: 1,
-              opacity: 1,
-              fillOpacity: 1
-            }).bindPopup(`<b>${business.name}</b><br>Activity: ${currentBusyness}%`);
-
-            heatmapLayer.addLayer(circle);
-          }
+      // Convert to [lat, lng, intensity] for Leaflet.heat
+      const points = data
+        .filter(row => row.businesses && row.businesses.latitude && row.businesses.longitude)
+        .map(row => {
+          const lat = Number(row.businesses.latitude);
+          const lng = Number(row.businesses.longitude);
+          let intensity = Number(row.typical_busyness || 0) / 100;
+          if (!isFinite(intensity)) intensity = 0;
+          return [lat, lng, intensity];
         });
 
-        heatmapLayer.addTo(map);
-      } catch (error) {
-        console.error('Error loading markers:', error);
+      return points;
+    }
+
+    // Render loop
+    let autoTimer = null;
+
+    async function renderHeat() {
+      const target = getTargetDate();
+      const { day, hour, label } = toDowHour(target);
+      updateStatusText(target, label);
+
+      const points = await fetchHeatPoints(day, hour);
+      heat.setLatLngs(points);
+
+      // Update small stats
+      pointCount.textContent = `${points.length} points`;
+      if (points.length) {
+        const avg = (points.reduce((a,p)=>a+(p[2]*100),0) / points.length).toFixed(0);
+        busynessAvg.textContent = `${avg}% avg`;
+      } else {
+        busynessAvg.textContent = "– avg";
       }
     }
 
-    // Init
-    updateCurrentTime();
-    loadHeatMap();
-    setInterval(() => { updateCurrentTime(); loadHeatMap(); }, 60000);
+    function scheduleAutoRefresh() {
+      if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+      // Only auto-refresh when slider = 0 and no explicit ts param (live look)
+      const live = Number(timeRange.value) === 0 && !new URLSearchParams(location.search).get("ts");
+      if (live) {
+        autoTimer = setInterval(renderHeat, 60 * 1000); // refresh every 60s
+      }
+    }
+
+    // Events
+    timeRange.addEventListener("input", () => {
+      renderHeat();
+      scheduleAutoRefresh();
+      // Update URL (no reload) with offset param for share
+      const p = new URLSearchParams(location.search);
+      p.delete("ts"); // offset-based view; ts is a fixed timestamp view
+      p.set("offset", String(Number(timeRange.value)));
+      history.replaceState(null, "", `${location.pathname}?${p.toString()}`);
+    });
+
+    nowBtn.addEventListener("click", () => {
+      const p = new URLSearchParams(location.search);
+      p.delete("ts"); // clear fixed timestamp
+      p.delete("offset");
+      history.replaceState(null, "", location.pathname);
+      timeRange.value = "0";
+      renderHeat();
+      scheduleAutoRefresh();
+    });
+
+    shareBtn.addEventListener("click", async () => {
+      // Share a fixed timestamp view (so recipients see exactly what you see)
+      const target = getTargetDate();
+      const ts = target.toISOString();
+      const url = new URL(location.href);
+      url.searchParams.delete("offset");
+      url.searchParams.set("ts", ts);
+      try {
+        await navigator.clipboard.writeText(url.toString());
+        shareBtn.textContent = "Copied ✔";
+        setTimeout(()=> shareBtn.textContent = "Share", 1400);
+      } catch {
+        alert(url.toString());
+      }
+    });
+
+    // On load: respect URL params (?ts=ISO or ?offset=H)
+    (async function init() {
+      // Center on Palma
+      map.setView([INITIAL_VIEW.lat, INITIAL_VIEW.lng], INITIAL_VIEW.zoom);
+
+      // If offset param exists, set slider
+      const sp = new URLSearchParams(location.search);
+      const offset = sp.get("offset");
+      if (offset !== null) {
+        timeRange.value = String(Math.min(23, Math.max(0, Number(offset)||0)));
+      } else if (sp.get("ts")) {
+        // Fixed timestamp view → set slider to 0 (we compute exact hour from ts)
+        timeRange.value = "0";
+      } else {
+        timeRange.value = "0"; // live by default
+      }
+
+      await renderHeat();
+      scheduleAutoRefresh();
+    })();
   </script>
 </body>
 </html>
