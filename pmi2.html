@@ -71,7 +71,6 @@
     .panel {
       position: absolute; z-index: 4000; right: 16px; bottom: 16px; left: 16px; max-width: 680px; margin-left: auto;
       background: rgba(13,22,40,0.92);
-      /* backdrop-filter: blur(8px);  <-- REMOVED: this scrambles tiles on Safari/WebKit */
       border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
       padding: 12px;
     }
@@ -90,16 +89,8 @@
       background: #0e1933; border: 1px solid var(--border); color: var(--muted); font-size: 12px;
     }
 
-    /* --- Leaflet tile safety for Safari/WebKit --- */
-    .leaflet-pane,
-    .leaflet-map-pane,
-    .leaflet-tile,
-    .leaflet-layer {
-      transform: translateZ(0);
-    }
-    .leaflet-tile {
-      backface-visibility: hidden;
-    }
+    /* FIXED: Removed problematic tile CSS that was causing upside-down/sideways tiles */
+    /* The original transform and backface-visibility rules were interfering with Leaflet's tile rendering */
 
     @media (max-width: 720px) {
       header { grid-template-columns: 1fr; gap: 8px; }
@@ -170,7 +161,6 @@
 
     L.control.attribution({ position: "bottomleft" }).addTo(map);
 
-    /* keep your Carto basemap; problem was CSS not the provider */
     const tiles = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
       {
