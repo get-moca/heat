@@ -182,9 +182,10 @@
                 
                 // Add heat map layer
                 heatmapLayer = L.heatLayer(heatData, {
-                    radius: 50,
-                    blur: 25,
+                    radius: 10,
+                    blur: 0,
                     maxZoom: 17,
+                    minZoom: 8,
                     max: 1.0,
                     gradient: {
                         0.0: '#00ff00',  // Green for low activity
