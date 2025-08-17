@@ -70,7 +70,9 @@
 
     .panel {
       position: absolute; z-index: 4000; right: 16px; bottom: 16px; left: 16px; max-width: 680px; margin-left: auto;
-      background: rgba(13,22,40,0.92); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+      background: rgba(13,22,40,0.92);
+      /* backdrop-filter: blur(8px);  <-- REMOVED: this scrambles tiles on Safari/WebKit */
+      border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
       padding: 12px;
     }
     .row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; }
@@ -86,6 +88,17 @@
     .badger {
       display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px;
       background: #0e1933; border: 1px solid var(--border); color: var(--muted); font-size: 12px;
+    }
+
+    /* --- Leaflet tile safety for Safari/WebKit --- */
+    .leaflet-pane,
+    .leaflet-map-pane,
+    .leaflet-tile,
+    .leaflet-layer {
+      transform: translateZ(0);
+    }
+    .leaflet-tile {
+      backface-visibility: hidden;
     }
 
     @media (max-width: 720px) {
@@ -142,21 +155,12 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2.47.10/dist/umd/supabase.js"></script>
 
   <script>
-    // =========================
-    // REQUIRED: EDIT THESE TWO
-    // =========================
-    // Replace with your Supabase project values (Project Settings → API)
-    const SUPABASE_URL = "https://rsbxesqwijscicakxjkk.supabase.co";  // <-- change this
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzYnhlc3F3aWpzY2ljYWt4amtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NTA3ODIsImV4cCI6MjA3MTAyNjc4Mn0.cPrMh42Khl21MsXYl4IOWViYZftsVjXi52Df4VhjWK8";             // <-- change this
-    // Make sure your RLS policies allow SELECT on both tables for anon.
+    const SUPABASE_URL = "https://rsbxesqwijscicakxjkk.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzYnhlc3F3aWpzY2ljYWt4amtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NTA3ODIsImV4cCI6MjA3MTAyNjc4Mn0.cPrMh42Khl21MsXYl4IOWViYZftsVjXi52Df4VhjWK8";
 
-    // Map center: Palma de Mallorca
     const INITIAL_VIEW = { lat: 39.5696, lng: 2.6502, zoom: 13 };
-
-    // Create Supabase client
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Map + heat layer
     const map = L.map("map", {
       zoomControl: true,
       minZoom: 3,
@@ -166,13 +170,15 @@
 
     L.control.attribution({ position: "bottomleft" }).addTo(map);
 
+    /* keep your Carto basemap; problem was CSS not the provider */
     const tiles = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
       {
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://www.carto.com/">CARTO</a>',
         subdomains: "abcd",
-        maxZoom: 20
+        maxZoom: 20,
+        detectRetina: true
       }
     ).addTo(map);
 
@@ -183,7 +189,6 @@
       minOpacity: 0.25
     }).addTo(map);
 
-    // UI elements
     const timeRange = document.getElementById("timeRange");
     const timeLabel = document.getElementById("timeLabel");
     const rangeCaption = document.getElementById("rangeCaption");
@@ -193,22 +198,16 @@
     const pointCount = document.getElementById("pointCount");
     const busynessAvg = document.getElementById("busynessAvg");
 
-    // Helpers
     function pad2(n){ return (n<10?"0":"") + n; }
 
-    // Compute target timestamp based on slider (0 = now, 23 = 23h ago).
     function getTargetDate() {
       const urlTs = new URLSearchParams(location.search).get("ts");
       let base = urlTs ? new Date(urlTs) : new Date();
-      // Slider is "hours ago"
       const hoursAgo = Number(timeRange.value || 0);
-      const target = new Date(base.getTime() - hoursAgo * 3600 * 1000);
-      return target;
+      return new Date(base.getTime() - hoursAgo * 3600 * 1000);
     }
 
-    // Map JS Date => day_of_week (0=Mon…6=Sun) and hour (0–23), Europe/Madrid local time.
     function toDowHour(date) {
-      // Force Europe/Madrid by using Intl and then parse; simple approach for MVP.
       const fmt = new Intl.DateTimeFormat("en-GB", {
         timeZone: "Europe/Madrid",
         weekday: "short",
@@ -216,7 +215,7 @@
         hour12: false
       });
       const parts = fmt.formatToParts(date);
-      const w = parts.find(p => p.type === "weekday").value; // Mon, Tue, ...
+      const w = parts.find(p => p.type === "weekday").value;
       const h = Number(parts.find(p => p.type === "hour").value);
       const map = { Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5, Sun:6 };
       return { day: map[w], hour: h, label: `${w} ${pad2(h)}:00` };
@@ -229,37 +228,19 @@
       rangeCaption.textContent = `Showing: ${labelText} (Europe/Madrid)`;
     }
 
-    // Fetch heat points from Supabase for a given day/hour.
     async function fetchHeatPoints(day, hour) {
-      // We require the related business coordinates; use inner join.
-      // Ensure FK exists: activity_patterns.business_id -> businesses.id
       const sel = "typical_busyness,hour,day_of_week,businesses!inner(latitude,longitude)";
       const { data, error } = await sb
         .from("activity_patterns")
         .select(sel)
         .eq("day_of_week", day)
         .eq("hour", hour);
-
-      if (error) {
-        console.error(error);
-        return [];
-      }
-
-      // Convert to [lat, lng, intensity] for Leaflet.heat
-      const points = data
-        .filter(row => row.businesses && row.businesses.latitude && row.businesses.longitude)
-        .map(row => {
-          const lat = Number(row.businesses.latitude);
-          const lng = Number(row.businesses.longitude);
-          let intensity = Number(row.typical_busyness || 0) / 100;
-          if (!isFinite(intensity)) intensity = 0;
-          return [lat, lng, intensity];
-        });
-
-      return points;
+      if (error) return [];
+      return data
+        .filter(r => r.businesses && r.businesses.latitude && r.businesses.longitude)
+        .map(r => [Number(r.businesses.latitude), Number(r.businesses.longitude), Number(r.typical_busyness||0)/100]);
     }
 
-    // Render loop
     let autoTimer = null;
 
     async function renderHeat() {
@@ -270,40 +251,30 @@
       const points = await fetchHeatPoints(day, hour);
       heat.setLatLngs(points);
 
-      // Update small stats
       pointCount.textContent = `${points.length} points`;
-      if (points.length) {
-        const avg = (points.reduce((a,p)=>a+(p[2]*100),0) / points.length).toFixed(0);
-        busynessAvg.textContent = `${avg}% avg`;
-      } else {
-        busynessAvg.textContent = "– avg";
-      }
+      busynessAvg.textContent = points.length
+        ? `${(points.reduce((a,p)=>a+(p[2]*100),0)/points.length).toFixed(0)}% avg`
+        : "– avg";
     }
 
     function scheduleAutoRefresh() {
       if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-      // Only auto-refresh when slider = 0 and no explicit ts param (live look)
       const live = Number(timeRange.value) === 0 && !new URLSearchParams(location.search).get("ts");
-      if (live) {
-        autoTimer = setInterval(renderHeat, 60 * 1000); // refresh every 60s
-      }
+      if (live) autoTimer = setInterval(renderHeat, 60 * 1000);
     }
 
-    // Events
     timeRange.addEventListener("input", () => {
       renderHeat();
       scheduleAutoRefresh();
-      // Update URL (no reload) with offset param for share
       const p = new URLSearchParams(location.search);
-      p.delete("ts"); // offset-based view; ts is a fixed timestamp view
+      p.delete("ts");
       p.set("offset", String(Number(timeRange.value)));
       history.replaceState(null, "", `${location.pathname}?${p.toString()}`);
     });
 
     nowBtn.addEventListener("click", () => {
       const p = new URLSearchParams(location.search);
-      p.delete("ts"); // clear fixed timestamp
-      p.delete("offset");
+      p.delete("ts"); p.delete("offset");
       history.replaceState(null, "", location.pathname);
       timeRange.value = "0";
       renderHeat();
@@ -311,7 +282,6 @@
     });
 
     shareBtn.addEventListener("click", async () => {
-      // Share a fixed timestamp view (so recipients see exactly what you see)
       const target = getTargetDate();
       const ts = target.toISOString();
       const url = new URL(location.href);
@@ -321,28 +291,18 @@
         await navigator.clipboard.writeText(url.toString());
         shareBtn.textContent = "Copied ✔";
         setTimeout(()=> shareBtn.textContent = "Share", 1400);
-      } catch {
-        alert(url.toString());
-      }
+      } catch { alert(url.toString()); }
     });
 
-    // On load: respect URL params (?ts=ISO or ?offset=H)
     (async function init() {
-      // Center on Palma
       map.setView([INITIAL_VIEW.lat, INITIAL_VIEW.lng], INITIAL_VIEW.zoom);
-
-      // If offset param exists, set slider
       const sp = new URLSearchParams(location.search);
       const offset = sp.get("offset");
       if (offset !== null) {
         timeRange.value = String(Math.min(23, Math.max(0, Number(offset)||0)));
-      } else if (sp.get("ts")) {
-        // Fixed timestamp view → set slider to 0 (we compute exact hour from ts)
-        timeRange.value = "0";
       } else {
-        timeRange.value = "0"; // live by default
+        timeRange.value = "0";
       }
-
       await renderHeat();
       scheduleAutoRefresh();
     })();
