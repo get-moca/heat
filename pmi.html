@@ -182,18 +182,18 @@
                 
                 // Add heat map layer
                 heatmapLayer = L.heatLayer(heatData, {
-                    radius: 10,          // Smaller base radius
-                    blur: 0,            // Reduced blur
-                    maxZoom: 17,         // Higher max zoom for better scaling
+                    radius: 10,
+                    blur: 0,
+                    maxZoom: 17,
                     minZoom: 8,
-                    minOpacity: 1,     // Minimum visibility for low activity
+                    max: 1.0,
                     gradient: {
-                        0.0: '#ff9999',  // Light red for low activity
-                        0.2: '#ff6666',  // 
-                        0.4: '#ff3333',  // 
-                        0.6: '#ff0000',  // Pure red for medium
-                        0.8: '#cc0000',  // Darker red
-                        1.0: '#990000'   // Very dark red for highest activity
+                        0.0: '#00ffcc',  // Cool teal for low activity
+                        0.2: '#00ccff',  // Light blue
+                        0.4: '#0099ff',  // Blue
+                        0.6: '#ff9900',  // Orange (transition)
+                        0.8: '#ff4400',  // Red-orange
+                        1.0: '#cc0000'   // Dark red for highest activity
                     }
                 }).addTo(map);
                 
