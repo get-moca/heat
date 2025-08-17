@@ -1,3 +1,6 @@
+const SUPABASE_URL = 'https://pbbqieughblgslipxsex.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYnFpZXVnaGJsZ3NsaXB4c2V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjM0ODYsImV4cCI6MjA3MDk5OTQ4Nn0.mQcvmS_uwAC9U3INJaWgEjP1ih0YIw5mkfEmMSPQnFc';
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,7 +74,7 @@
         .legend-gradient {
             width: 100px;
             height: 10px;
-            background: linear-gradient(to right, #ff9999, #ff3333, #990000);
+            background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
         }
     </style>
 </head>
@@ -105,7 +108,7 @@
         // Your Supabase configuration
         const SUPABASE_URL = 'https://pbbqieughblgslipxsex.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYnFpZXVnaGJsZ3NsaXB4c2V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjM0ODYsImV4cCI6MjA3MDk5OTQ4Nn0.mQcvmS_uwAC9U3INJaWgEjP1ih0YIw5mkfEmMSPQnFc';
-        
+
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         // Initialize map centered on Mallorca
@@ -182,17 +185,14 @@
                 
                 // Add heat map layer
                 heatmapLayer = L.heatLayer(heatData, {
-                    radius: 15,
-                    blur: 10,
-                    maxZoom: 30,
+                    radius: 50,
+                    blur: 25,
+                    maxZoom: 17,
                     max: 1.0,
                     gradient: {
-                        0.0: '#ff9999',  // Light red for low activity
-                        0.2: '#ff6666',  // 
-                        0.4: '#ff3333',  // 
-                        0.6: '#ff0000',  // Pure red for medium
-                        0.8: '#cc0000',  // Darker red
-                        1.0: '#990000'   // Very dark red for highest activity
+                        0.0: '#00ff00',  // Green for low activity
+                        0.5: '#ffff00',  // Yellow for medium
+                        1.0: '#ff0000'   // Red for high activity
                     }
                 }).addTo(map);
                 
