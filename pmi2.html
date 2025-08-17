@@ -1,0 +1,32 @@
+<div id="map" style="height:100vh;"></div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js"></script>
+<script>
+  const { createClient } = supabase
+  const supabaseClient = createClient("https://pbbqieughblgslipxsex.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYnFpZXVnaGJsZ3NsaXB4c2V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjM0ODYsImV4cCI6MjA3MDk5OTQ4Nn0.mQcvmS_uwAC9U3INJaWgEjP1ih0YIw5mkfEmMSPQnFc")
+
+  async function loadData() {
+    const now = new Date()
+    const day = now.getDay()
+    const hour = now.getHours()
+
+    const { data } = await supabaseClient
+      .from("businesses")
+      .select("latitude, longitude, popular_times!inner(busyness)")
+      .eq("popular_times.day_of_week", day)
+      .eq("popular_times.hour", hour)
+
+    return data.map(d => [d.latitude, d.longitude, d.popular_times[0].busyness / 100])
+  }
+
+  async function initMap() {
+    const map = L.map('map').setView([39.57, 2.65], 13) // Palma coords
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+
+    const heatData = await loadData()
+    L.heatLayer(heatData, {radius: 25}).addTo(map)
+  }
+
+  initMap()
+</script>
