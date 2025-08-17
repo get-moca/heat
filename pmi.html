@@ -146,62 +146,57 @@
             return currentActivity ? currentActivity.typical_busyness : 0;
         }
         
-        // Load and display heat map
+        // Load and display colored circles (not heat map)
         async function loadHeatMap() {
             try {
-                // Get all businesses
-                const businessesResponse = await supabase
-                    .from('businesses')
-                    .select('*');
-                
-                // Get all activity patterns
-                const patternsResponse = await supabase
-                    .from('activity_patterns')
-                    .select('*');
-                
+                // Get data (same as before)
+                const businessesResponse = await supabase.from('businesses').select('*');
+                const patternsResponse = await supabase.from('activity_patterns').select('*');
                 const businesses = businessesResponse.data;
                 const allPatterns = patternsResponse.data;
-                
-                // Create heat map data
-                const heatData = businesses.map(business => {
-                    const businessPatterns = allPatterns.filter(p => p.business_id === business.id);
-                    const currentBusyness = getCurrentActivity(businessPatterns);
-                    
-                    // Convert to heat map format [lat, lng, intensity]
-                    return [
-                        business.latitude,
-                        business.longitude,
-                        currentBusyness / 100 // Normalize to 0-1 scale
-                    ];
-                }).filter(point => point[2] > 0); // Only show active locations
-                
-                // Remove existing heat map
+        
+                // Remove existing layer
                 if (heatmapLayer) {
                     map.removeLayer(heatmapLayer);
                 }
-                
-                // Add heat map layer
-                heatmapLayer = L.heatLayer(heatData, {
-                    radius: 10,
-                    blur: 0,
-                    maxZoom: 17,
-                    minZoom: 8,
-                    max: 1.0,
-                    minOpacity: 1,     // Minimum visibility for low activity
-                    gradient: {
-                        0.0: '#00ffcc',  // Cool teal for low activity
-                        0.2: '#00ccff',  // Light blue
-                        0.4: '#0099ff',  // Blue
-                        0.6: '#ff9900',  // Orange (transition)
-                        0.8: '#ff4400',  // Red-orange
-                        1.0: '#cc0000'   // Dark red for highest activity
+        
+                // Create marker group instead of heat layer
+                heatmapLayer = L.layerGroup();
+        
+                businesses.forEach(business => {
+                    const businessPatterns = allPatterns.filter(p => p.business_id === business.id);
+                    const currentBusyness = getCurrentActivity(businessPatterns);
+                    
+                    if (currentBusyness > 0) {
+                        // Get single color based on busyness level
+                        const intensity = currentBusyness / 100;
+                        let color;
+                        
+                        if (intensity < 0.2) color = '#00ffcc';      // Cool teal
+                        else if (intensity < 0.4) color = '#00ccff'; // Light blue  
+                        else if (intensity < 0.6) color = '#0099ff'; // Blue
+                        else if (intensity < 0.8) color = '#ff9900'; // Orange
+                        else color = '#cc0000';                      // Dark red
+        
+                        // Create solid colored circle
+                        const circle = L.circleMarker([business.latitude, business.longitude], {
+                            radius: 8,           // Fixed size
+                            fillColor: color,    // Solid fill color
+                            color: color,        // Border same color
+                            weight: 1,
+                            opacity: 1,          // Fully opaque
+                            fillOpacity: 1       // Solid fill
+                        }).bindPopup(`<b>${business.name}</b><br>Activity: ${currentBusyness}%`);
+        
+                        heatmapLayer.addLayer(circle);
                     }
-                }).addTo(map);
-                
-                console.log(`Heat map loaded with ${heatData.length} active locations`);
-                
+                });
+        
+                heatmapLayer.addTo(map);
+                console.log(`Colored circles loaded`);
+        
             } catch (error) {
-                console.error('Error loading heat map:', error);
+                console.error('Error loading circles:', error);
             }
         }
         
